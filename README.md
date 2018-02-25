@@ -1,2 +1,3 @@
 # STM32-playground
-Different examples and experiments for STM32 platform
+Repository contains different examples for STM32 platform. Each example is contained in separate branch.
+All examples use HAL library. Initial code is generated with STM32CubeMx for System Workbench for STM32 (SW4STM).
