@@ -82,7 +82,9 @@ void SystemClock_Config(void);
 
 /** State processing functions */
 void doTransmitReady(void);
+void doTransmitting(void);
 void doReceiveReady(void);
+void doReceiving(void);
 void doReceived(void);
 /* USER CODE END PFP */
 
@@ -140,16 +142,21 @@ int main(void)
 	  		  doTransmitReady();
 			  break;
 
+	  	  case TRANSMITTING:
+	  		  doTransmitting();
+	  		  break;
+
 	  	  case RECEIVE_READY:
 	  		  doReceiveReady();
 			  break;
 
+	  	  case RECEIVING:
+	  		  doReceiving();
+	  		  break;
+
 	  	  case RECEIVED:
 	  		  doReceived();
 			  break;
-
-	  	  default:
-	  		  break;
 	  }
   /* USER CODE END WHILE */
 
@@ -233,7 +240,6 @@ void doTransmitReady(void)
 			query.mode = 0;
 		}
 		makeQueryParcel(&query, txBuffer);
-		query.mode++;
 		parcelReady = true;
 	}
 
@@ -241,7 +247,6 @@ void doTransmitReady(void)
 	if (status == HAL_OK)
 	{
 		state = TRANSMITTING;
-		parcelReady = false;
 		return;
 	}
 	else if (status == HAL_BUSY)
@@ -258,6 +263,35 @@ void doTransmitReady(void)
 	}
 }
 
+void doTransmitting(void)
+{
+	if (state != TRANSMITTING)
+	{
+		return;
+	}
+
+	uint32_t code = HAL_I2C_GetError(&hi2c1);
+	if (code == HAL_I2C_ERROR_NONE)
+	{
+		return;
+	}
+	else if (code == HAL_I2C_ERROR_AF)
+	{
+		/** If slave can't acknowledge its address, we just restart communication */
+		state = TRANSMIT_READY;
+		return;
+	}
+	else
+	{
+		/** Otherwise we want to report about error and restart communication */
+		char message[30];
+		uint32_t code = HAL_I2C_GetError(&hi2c1);
+		sprintf(message, "Transmit error code: %zu\r\n", code);
+		HAL_UART_Transmit(&huart4, (uint8_t*) message, strlen(message), 1000);
+		state = TRANSMIT_READY;
+		return;
+	}
+}
 
 void doReceiveReady(void)
 {
@@ -285,6 +319,36 @@ void doReceiveReady(void)
 	}
 }
 
+void doReceiving(void)
+{
+	if (state != RECEIVING)
+	{
+		return;
+	}
+
+	uint32_t code = HAL_I2C_GetError(&hi2c1);
+	if (code == HAL_I2C_ERROR_NONE)
+	{
+		return;
+	}
+	else if (code == HAL_I2C_ERROR_AF)
+	{
+		/** If slave can't acknowledge its address, we just restart only receiving */
+		state = RECEIVE_READY;
+		return;
+	}
+	else
+	{
+		/** Otherwise we want to report about error and restart communication */
+		char message[30];
+		uint32_t code = HAL_I2C_GetError(&hi2c1);
+		sprintf(message, "Transmit error code: %zu\r\n", code);
+		HAL_UART_Transmit(&huart4, (uint8_t*) message, strlen(message), 1000);
+		state = TRANSMIT_READY;
+		return;
+	}
+}
+
 void doReceived(void)
 {
 	if (state != RECEIVED)
@@ -306,17 +370,25 @@ void doReceived(void)
 	HAL_UART_Transmit(&huart4, (uint8_t*)message, strlen(message), 1000);
 
 	HAL_Delay(500);
+	query.mode++;
+	parcelReady = false;
 	state= TRANSMIT_READY;
 }
 
 void HAL_I2C_MasterTxCpltCallback (I2C_HandleTypeDef * hi2c)
 {
-	state = RECEIVE_READY;
+	if (state == TRANSMITTING)
+	{
+		state = RECEIVE_READY;
+	}
 }
 
 void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef * hi2c)
 {
-	state = RECEIVED;
+	if (state == RECEIVING)
+	{
+		state = RECEIVED;
+	}
 }
 /* USER CODE END 4 */
 
