@@ -38,6 +38,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_hal.h"
+#include "dma.h"
 #include "i2c.h"
 #include "usart.h"
 #include "gpio.h"
@@ -121,6 +122,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_I2C1_Init();
   MX_UART4_Init();
   /* USER CODE BEGIN 2 */
@@ -243,7 +245,7 @@ void doTransmitReady(void)
 		parcelReady = true;
 	}
 
-	HAL_StatusTypeDef status = HAL_I2C_Master_Transmit_IT(&hi2c1, shiftedAddress, txBuffer, sizeof(txBuffer));
+	HAL_StatusTypeDef status = HAL_I2C_Master_Transmit_DMA(&hi2c1, shiftedAddress, txBuffer, sizeof(txBuffer));
 	if (status == HAL_OK)
 	{
 		state = TRANSMITTING;
@@ -300,7 +302,7 @@ void doReceiveReady(void)
 		return;
 	}
 
-	HAL_StatusTypeDef status = HAL_I2C_Master_Receive_IT(&hi2c1, shiftedAddress, rxBuffer, sizeof(rxBuffer));
+	HAL_StatusTypeDef status = HAL_I2C_Master_Receive_DMA(&hi2c1, shiftedAddress, rxBuffer, sizeof(rxBuffer));
 	if (status == HAL_OK)
 	{
 		state = RECEIVING;
