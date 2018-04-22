@@ -9,7 +9,7 @@
 /** Parcel size in bytes */
 #define PARCEL_SIZE_POSITION 14
 #define PARCEL_SIZE_POINTS 66
-
+#define POINTS_NUMBER 16
 /**
  * Parcel format:
  * 
@@ -30,24 +30,39 @@ typedef union {
   uint8_t bytes[4];
 } float_union_t;
 
-int counter;
-int counterMax;
+bool mode;
+
+uint8_t positionParcel[PARCEL_SIZE_POSITION] = { 0 };
+uint8_t pointsParcel[PARCEL_SIZE_POINTS] = { 0 };
 
 void setup() {
   randomSeed(analogRead(0));
   Serial.begin(9600);
   Wire.begin();
+  mode = true;
 }
 
 void loop() {
-  delay(100);
+  if (mode) {
+    makePositionParcel(positionParcel);
+    Wire.beginTransmission(SLAVE_ADDRESS);
+    Wire.write(positionParcel, sizeof(positionParcel));
+    Wire.endTransmission();
+  } else {
+    makePointsParcel(pointsParcel);
+    Wire.beginTransmission(SLAVE_ADDRESS);
+    Wire.write(pointsParcel, sizeof(pointsParcel));
+    Wire.endTransmission();
+  }
+  mode = !mode;
+  delay(5000);
 }
 
 void makePositionParcel(uint8_t *parcel) {
   parcel[0] = PARCEL_POSITION;
   int index = 1;
   for (int i = 0; i < 3; i++) {
-    float value = random(0, 100) / 100.0;
+    float value = random(0, 100) / 10.0;
     appendFloat(parcel, value, index);
     index += 4;
   }
@@ -57,8 +72,8 @@ void makePositionParcel(uint8_t *parcel) {
 void makePointsParcel(uint8_t *parcel) {
   parcel[0] = PARCEL_POINTS;
   int index = 1;
-  for (int i = 0; i < 15; i++) {
-    float value = random(0, 100) / 100.0;
+  for (int i = 0; i < POINTS_NUMBER; i++) {
+    float value = random(0, 100) / 10.0;
     appendFloat(parcel, value, index);
     index += 4;
   }
@@ -84,4 +99,12 @@ void addChecksumm8b(uint8_t *msg, uint16_t length) {
 
     msg[length-1] = crc;
 }
+
+void blink() {
+  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(1000);                       // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+  delay(1000);                       // wait for a second
+}
+
 

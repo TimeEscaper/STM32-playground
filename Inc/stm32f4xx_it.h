@@ -48,6 +48,12 @@
 /* Exported functions ------------------------------------------------------- */
 
 void SysTick_Handler(void);
+void DMA1_Stream0_IRQHandler(void);
+void DMA1_Stream2_IRQHandler(void);
+void DMA1_Stream4_IRQHandler(void);
+void I2C1_EV_IRQHandler(void);
+void I2C1_ER_IRQHandler(void);
+void UART4_IRQHandler(void);
 
 #ifdef __cplusplus
 }

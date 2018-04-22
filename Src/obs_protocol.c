@@ -1,6 +1,6 @@
 #include "obs_protocol.h"
 
-uint8_t resolveMessageType(uint8_t *parcel, obs_message_type_t *type)
+uint8_t resolveMessageType(const uint8_t *parcel, obs_message_type_t *type)
 {
 	if (!parcel || !type)
 	{
@@ -23,7 +23,7 @@ uint8_t resolveMessageType(uint8_t *parcel, obs_message_type_t *type)
 	}
 }
 
-uint8_t decodePositionMessage(uint8_t *parcel, obs_position_t *message)
+uint8_t decodePositionMessage(const uint8_t *parcel, obs_position_t *message)
 {
 	if (!parcel || !message)
 	{
@@ -42,13 +42,13 @@ uint8_t decodePositionMessage(uint8_t *parcel, obs_position_t *message)
 	return 0;
 }
 
-uint8_t decodePointsMessage(uint8_t *parcel, obs_points_t *message)
+uint8_t decodePointsMessage(const uint8_t *parcel, obs_points_t *message)
 {
 	if (!parcel || !message)
 	{
 		return NULL_POINTER_ERROR;
 	}
-	if (!isChecksumm8bCorrect(parcel, PARCEL_SIZE_POINTS))
+	if (!isChecksumm8bCorrect(parcel, POINTS_PARCEL_SIZE))
 	{
 		return CHECKSUM_ERROR;
 	}
@@ -65,7 +65,7 @@ uint8_t decodePointsMessage(uint8_t *parcel, obs_points_t *message)
 	return 0;
 }
 
-bool isChecksumm8bCorrect(uint8_t *msg, uint16_t length)
+bool isChecksumm8bCorrect(const uint8_t *msg, uint16_t length)
 {
 	uint8_t crcGot, crc = 0;
 	int i;
@@ -81,7 +81,7 @@ bool isChecksumm8bCorrect(uint8_t *msg, uint16_t length)
 	else return 0;
 }
 
-float readFloat(uint8_t *p)
+float readFloat(const uint8_t *p)
 {
 	union
 	{

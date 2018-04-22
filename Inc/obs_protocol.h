@@ -27,7 +27,10 @@
 #define POSITION_PARCEL_SIZE 14
 
 /** Size for parcel with points message */
-#define PARCEL_SIZE_POINTS 66
+#define POINTS_PARCEL_SIZE 66
+
+/** No problems */
+#define NO_ERROR 0
 
 /** NPE checks for better reliability */
 #define NULL_POINTER_ERROR 1
@@ -61,16 +64,19 @@ typedef struct
 
 
 /** Determine message type of received parcel */
-uint8_t resolveMessageType(uint8_t *parcel, obs_message_type_t *type);
+uint8_t resolveMessageType(const uint8_t *parcel, obs_message_type_t *type);
 
 /** Decode OBS position message from parcel */
-uint8_t decodePositionMessage(uint8_t *parcel, obs_position_t *message);
+uint8_t decodePositionMessage(const uint8_t *parcel,obs_position_t *message);
 
 /** Decode OBS points message from parcel */
-uint8_t decodePointsMessage(uint8_t *parcel, obs_points_t *message);
+uint8_t decodePointsMessage(const uint8_t *parcel, obs_points_t *message);
 
 /** Checksum */
-bool isChecksumm8bCorrect(uint8_t *msg, uint16_t length);
+bool isChecksumm8bCorrect(const uint8_t *msg, uint16_t length);
+
+/** Helper function to read float from byte array */
+float readFloat(const uint8_t *p);
 
 
 #endif /* OBS_PROTOCOL_H_ */

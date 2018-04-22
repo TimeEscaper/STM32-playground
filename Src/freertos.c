@@ -52,7 +52,12 @@
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN Includes */     
-
+#include <string.h>
+#include <stdlib.h>
+#include "dma.h"
+#include "i2c.h"
+#include "usart.h"
+#include "obs_protocol.h"
 /* USER CODE END Includes */
 
 /* Variables -----------------------------------------------------------------*/
@@ -61,7 +66,7 @@ osThreadId i2cTaskHandle;
 osMessageQId i2cInterruptQueueHandle;
 
 /* USER CODE BEGIN Variables */
-
+uint8_t i2cRxBuffer[COMMON_PARCEL_LENGTH] = { 0 };
 /* USER CODE END Variables */
 
 /* Function prototypes -------------------------------------------------------*/
@@ -71,7 +76,11 @@ void StartI2CTask(void const * argument);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /* USER CODE BEGIN FunctionPrototypes */
-
+void processParcel(const uint8_t *parcel);
+void logHalErrorUart(int8_t errorCode);
+void logProtocolErrorUart(int8_t errorCode);
+void sendPositionUart(const obs_position_t *position);
+void sendPointsUart(const obs_points_t *points);
 /* USER CODE END FunctionPrototypes */
 
 /* Hook prototypes */
@@ -101,7 +110,7 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of i2cTask */
-  osThreadDef(i2cTask, StartI2CTask, osPriorityNormal, 0, 128);
+  osThreadDef(i2cTask, StartI2CTask, osPriorityHigh, 0, 128);
   i2cTaskHandle = osThreadCreate(osThread(i2cTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -135,16 +144,117 @@ void StartDefaultTask(void const * argument)
 void StartI2CTask(void const * argument)
 {
   /* USER CODE BEGIN StartI2CTask */
+  uint16_t bufferSize = sizeof(i2cRxBuffer);
+  uint32_t i2cErrorCode = 0;
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  HAL_StatusTypeDef status = HAL_I2C_Slave_Receive_DMA(&hi2c1, i2cRxBuffer, bufferSize);
+	  if (status == HAL_OK)
+	  {
+		  BaseType_t passed = xQueueReceive(i2cInterruptQueueHandle, (void*)&i2cErrorCode, portMAX_DELAY);
+		  if (passed != pdPASS)
+		  {
+			  continue;
+		  }
+
+		  if (i2cErrorCode == HAL_I2C_ERROR_NONE || i2cErrorCode == HAL_I2C_ERROR_AF)
+		  {
+			  processParcel(i2cRxBuffer);
+		  }
+		  else
+		  {
+			  logHalErrorUart(i2cErrorCode);
+		  }
+	  }
   }
   /* USER CODE END StartI2CTask */
 }
 
 /* USER CODE BEGIN Application */
-     
+void processParcel(const uint8_t *parcel)
+{
+	obs_message_type_t messageType;
+	uint8_t err = resolveMessageType(parcel, &messageType);
+	if (err != NO_ERROR)
+	{
+		logProtocolErrorUart(err);
+		return;
+	}
+
+	if (messageType == POSITION)
+	{
+		obs_position_t position;
+		err = decodePositionMessage(parcel, &position);
+		if (err != NO_ERROR)
+		{
+			logProtocolErrorUart(err);
+			return;
+		}
+		sendPositionUart(&position);
+	}
+	else
+	{
+		obs_points_t points;
+		err = decodePointsMessage(parcel, &points);
+		if (err != NO_ERROR)
+		{
+			logProtocolErrorUart(err);
+			return;
+		}
+		sendPointsUart(&points);
+	}
+}
+
+void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef* hi2c)
+{
+	uint32_t errorCode = HAL_I2C_GetError(hi2c);
+	BaseType_t taskWoken = pdFALSE;
+	xQueueSendFromISR(i2cInterruptQueueHandle, (void*)&errorCode, &taskWoken);
+	if (taskWoken == pdTRUE)
+	{
+		portYIELD_FROM_ISR(taskWoken);
+	}
+}
+
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef* hi2c)
+{
+	uint32_t errorCode = HAL_I2C_GetError(hi2c);
+	BaseType_t taskWoken = pdFALSE;
+	xQueueSendFromISR(i2cInterruptQueueHandle, (void*)&errorCode, &taskWoken);
+	if (taskWoken == pdTRUE)
+	{
+		portYIELD_FROM_ISR(taskWoken);
+	}
+}
+
+void logHalErrorUart(int8_t errorCode)
+{
+	char messageStr[30];
+	sprintf(messageStr, "HAL error code: %d\r\n", errorCode);
+	HAL_UART_Transmit(&huart4, (uint8_t*)messageStr, strlen(messageStr), 1000);
+}
+
+void logProtocolErrorUart(int8_t errorCode)
+{
+	char messageStr[30];
+	sprintf(messageStr, "Protocol error code: %d\r\n", errorCode);
+	HAL_UART_Transmit(&huart4, (uint8_t*)messageStr, strlen(messageStr), 1000);
+}
+
+void sendPositionUart(const obs_position_t *position)
+{
+	char messageStr[30];
+	sprintf(messageStr, "X: %f; Y: %f; Voltage: %f;\r\n", position->x, position->y, position->voltage);
+	HAL_UART_Transmit(&huart4, (uint8_t*)messageStr, strlen(messageStr), 1000);
+}
+
+void sendPointsUart(const obs_points_t *points)
+{
+	char messageStr[30];
+	sprintf(messageStr, "1: %f; 7: %f; 15: %f;\r\n", points->points[0], points->points[6], points->points[15]);
+	HAL_UART_Transmit(&huart4, (uint8_t*)messageStr, strlen(messageStr), 1000);
+}
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
