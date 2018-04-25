@@ -146,6 +146,7 @@ void StartI2CTask(void const * argument)
   /* USER CODE BEGIN StartI2CTask */
   uint16_t bufferSize = sizeof(i2cRxBuffer);
   uint32_t i2cErrorCode = 0;
+  logHalErrorUart(i2cErrorCode);
   /* Infinite loop */
   for(;;)
   {
@@ -232,28 +233,28 @@ void logHalErrorUart(int8_t errorCode)
 {
 	char messageStr[30];
 	sprintf(messageStr, "HAL error code: %d\r\n", errorCode);
-	HAL_UART_Transmit(&huart4, (uint8_t*)messageStr, strlen(messageStr), 1000);
+	HAL_UART_Transmit_DMA(&huart4, (uint8_t*)messageStr, strlen(messageStr));
 }
 
 void logProtocolErrorUart(int8_t errorCode)
 {
 	char messageStr[30];
 	sprintf(messageStr, "Protocol error code: %d\r\n", errorCode);
-	HAL_UART_Transmit(&huart4, (uint8_t*)messageStr, strlen(messageStr), 1000);
+	HAL_UART_Transmit_DMA(&huart4, (uint8_t*)messageStr, strlen(messageStr));
 }
 
 void sendPositionUart(const obs_position_t *position)
 {
 	char messageStr[30];
 	sprintf(messageStr, "X: %f; Y: %f; Voltage: %f;\r\n", position->x, position->y, position->voltage);
-	HAL_UART_Transmit(&huart4, (uint8_t*)messageStr, strlen(messageStr), 1000);
+	HAL_UART_Transmit_DMA(&huart4, (uint8_t*)messageStr, strlen(messageStr));
 }
 
 void sendPointsUart(const obs_points_t *points)
 {
 	char messageStr[30];
 	sprintf(messageStr, "1: %f; 7: %f; 15: %f;\r\n", points->points[0], points->points[6], points->points[15]);
-	HAL_UART_Transmit(&huart4, (uint8_t*)messageStr, strlen(messageStr), 1000);
+	HAL_UART_Transmit_DMA(&huart4, (uint8_t*)messageStr, strlen(messageStr));
 }
 /* USER CODE END Application */
 

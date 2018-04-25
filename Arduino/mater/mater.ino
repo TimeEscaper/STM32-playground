@@ -55,7 +55,7 @@ void loop() {
     Wire.endTransmission();
   }
   mode = !mode;
-  delay(5000);
+  delay(500);
 }
 
 void makePositionParcel(uint8_t *parcel) {

@@ -8,6 +8,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+ /**
+  * Parcel format:
+  *
+  * 1) For OBS position:
+  * [1 byte type] [4 byte X] [4 byte Y] [4 byte Voltage] [1 byte checksum]
+  *
+  * 2) For data points:
+  * [1 byte type] 16x[4 byte amplitude] [1 byte checksum]
+  *
+  * Multibyte values are represented in format: [HI to LO]
+  */
+
+
 /*
  * Number of OBS graphic points,
  * transmitted in one message.
